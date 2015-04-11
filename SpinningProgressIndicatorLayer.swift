@@ -56,7 +56,7 @@ class SpinningProgressIndicatorLayer: CALayer {
     }
     
     var color : NSColor  { // "copy" because we don't retain it -- we create a CGColor from it
-        get { return NSColor(CGColor: foreColor) }
+        get { return NSColor(CGColor: foreColor)! }
         set {
             // Need to convert from NSColor to CGColor
             foreColor = newValue.CGColor

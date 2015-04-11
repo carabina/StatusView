@@ -30,7 +30,7 @@ class StatusView: NSView {
     //MARK: - Variables
     //MARK: Objects
 
-    let mainLayer : CALayer!
+    var mainLayer : CALayer!
     let borderLayer = CAShapeLayer()
     let shapeLayer = CAShapeLayer()
     var shapeColor : CGColor!
