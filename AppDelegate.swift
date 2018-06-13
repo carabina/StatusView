@@ -15,7 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @IBOutlet weak var statusView: StatusView!
 
     var statusCounter : Int = 1
-    dynamic var enableInverted = true
+    @objc dynamic var enableInverted = true
 
     func applicationDidFinishLaunching(aNotification: NSNotification) {
         statusView.inverted = false
@@ -27,38 +27,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Insert code here to tear down your application
     }
 
-    @IBAction func invert(sender: NSButton) {
-        statusView.inverted = Bool(sender.state)
+    @IBAction func invert(_ sender: NSButton) {
+        statusView.inverted = sender.state == .on ? true : false
     }
     
-    @IBAction func enable(sender: NSButton) {
-        statusView.enabled = Bool(sender.state)
+    @IBAction func enable(_ sender: NSButton) {
+        statusView.enabled = sender.state == .on ? true : false
     }
     
-    @IBAction func saveDocument(sender: NSButton) {
-        if let imageRep = statusView.bitmapImageRepForCachingDisplayInRect(statusView.bounds) {
-            statusView.cacheDisplayInRect(statusView.bounds, toBitmapImageRep:imageRep)
-            let data = imageRep.TIFFRepresentation!
-            let UUID = NSUUID().UUIDString
-            let desktop = NSHomeDirectory().stringByAppendingPathComponent("Desktop")
-            data.writeToFile("\(desktop)/\(UUID).tif", atomically: true)
+    @IBAction func saveDocument(_ sender: NSButton) {
+        if let imageRep = statusView.bitmapImageRepForCachingDisplay(in: statusView.bounds) {
+            statusView.cacheDisplay(in: statusView.bounds, to:imageRep)
+            let data = imageRep.tiffRepresentation!
+            let uuid = UUID().uuidString
+            let desktop = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Desktop")
+            try? data.write(to: desktop.appendingPathComponent("\(uuid).tif"))
         }
     }
     
-    @IBAction func push(sender : NSButton!)
+    @IBAction func push(_ sender : NSButton!)
     {
-        statusCounter++
+        statusCounter += 1
         if statusCounter == 5 { statusCounter = 0 }
         switch statusCounter {
-        case 0: statusView.status = .None
-        case 1: statusView.status = .Processing
-        case 2: statusView.status = .Failed
-        case 3: statusView.status = .Caution
-        case 4: statusView.status = .Success
+        case 0: statusView.status = .none
+        case 1: statusView.status = .processing
+        case 2: statusView.status = .failed
+        case 3: statusView.status = .caution
+        case 4: statusView.status = .success
         default :
-            statusView.status = .None
+            statusView.status = .none
         }
-        enableInverted = statusView.status != .Processing
+        enableInverted = statusView.status != .processing
     }
 }
 

@@ -11,55 +11,56 @@ class SpinningProgressIndicatorLayer: CALayer {
     
     let RotationAnimationKey = "rotationAnimation"
     let FadeAnimationKey = "opacity"
-//    let INDETERMINATE_FADE_ANIMATION = true
+    //    let INDETERMINATE_FADE_ANIMATION = true
     
     struct FinGeometry {
-        var bounds : CGRect = CGRectZero
-        var anchorPoint : CGPoint = CGPointZero
-        var position : CGPoint = CGPointZero
+        var bounds = CGRect.zero
+        var anchorPoint = CGPoint.zero
+        var position = CGPoint.zero
         var cornerRadius : CGFloat = 0.0
     }
     
     struct PieGeometry {
-        var bounds : CGRect = CGRectZero
+        var bounds = CGRect.zero
         var outerEdgeLength : CGFloat = 0.0
         var outlineWidth : CGFloat = 0.0
     }
     
-    private var indeterminateCycleDuration : CFTimeInterval
-    private var foreColor : CGColorRef!
-    private var fullOpacity : Float
-    private var indeterminateMinimumOpacity : Float
-    private var numFins : UInt
-    private var finLayersRoot : CALayer
-    private var finLayers : Array<CALayer>
-    private var finLayerRotationValues : Array<CGFloat>
-    private var pieLayersRoot : CALayer
-    private var pieOutline : CAShapeLayer!
-    private var pieChartShape : CAShapeLayer!
+    fileprivate var indeterminateCycleDuration : CFTimeInterval
+    fileprivate var foreColor = CGColor.clear
+    fileprivate var fullOpacity : Float
+    fileprivate var indeterminateMinimumOpacity : Float
+    fileprivate var numFins : UInt
+    fileprivate var finLayersRoot : CALayer
+    fileprivate var finLayers : Array<CALayer>
+    fileprivate var finLayerRotationValues : Array<CGFloat>
+    fileprivate var pieLayersRoot : CALayer
+    fileprivate var pieOutline : CAShapeLayer!
+    fileprivate var pieChartShape : CAShapeLayer!
     
-    private var referenceSizeForShadowResizing  : CGSize {
+    fileprivate var referenceSizeForShadowResizing  : CGSize {
         didSet {
             initialShadowRadius = self.shadowRadius
             initialShadowOffset = self.shadowOffset
             updateShadowDimensions()
         }
     }
-    private var initialShadowRadius : CGFloat!
-    private var initialShadowOffset : CGSize!
+    
+    fileprivate var initialShadowRadius : CGFloat = 0.0
+    fileprivate var initialShadowOffset = CGSize.zero
     
     var isRunning : Bool
     var isDeterminate : Bool = false {
-            didSet {
-               setupType()
+        didSet {
+            setupType()
         }
     }
     
     var color : NSColor  { // "copy" because we don't retain it -- we create a CGColor from it
-        get { return NSColor(CGColor: foreColor)! }
+        get { return NSColor(cgColor: foreColor)! }
         set {
             // Need to convert from NSColor to CGColor
-            foreColor = newValue.CGColor
+            foreColor = newValue.cgColor
             
             // Update all of the fins to this new color, at once, immediately
             CATransaction.begin()
@@ -67,7 +68,7 @@ class SpinningProgressIndicatorLayer: CALayer {
             for fin in finLayers {
                 fin.backgroundColor = foreColor
             }
-        
+            
             if pieOutline != nil { pieOutline.strokeColor = foreColor }
             if pieChartShape != nil { pieChartShape.strokeColor = foreColor }
             
@@ -108,7 +109,7 @@ class SpinningProgressIndicatorLayer: CALayer {
     
     convenience override init()
     {
-        self.init(indeterminateCycleDuration:CFTimeInterval(0.7), determinateTweenTime:CFTimeInterval.NaN) // Use Core Animation default.
+        self.init(indeterminateCycleDuration:CFTimeInterval(0.7), determinateTweenTime:CFTimeInterval.nan) // Use Core Animation default.
     }
     
     init(indeterminateCycleDuration : CFTimeInterval, determinateTweenTime : CFTimeInterval)
@@ -128,10 +129,10 @@ class SpinningProgressIndicatorLayer: CALayer {
         isDeterminate = false
         maxValue = 100.0
         doubleValue = 0.0
-        referenceSizeForShadowResizing = CGSizeMake(100.0, 100.0)
-    
+        referenceSizeForShadowResizing = CGSize(width: 100.0, height: 100.0)
+        
         super.init()
-        self.color = NSColor.blackColor()
+        self.color = NSColor.black
         self.addSublayer(finLayersRoot)
         self.bounds = CGRect(x:0.0, y:0.0, width:10.0, height:10.0)
         
@@ -139,8 +140,9 @@ class SpinningProgressIndicatorLayer: CALayer {
         createDeterminateLayers()
         
     }
-
-    required init(coder aDecoder: NSCoder) {
+    
+    
+    required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
@@ -149,9 +151,9 @@ class SpinningProgressIndicatorLayer: CALayer {
     }
     
     //MARK: - Overrides
-
+    
     override var bounds : CGRect
-    {
+        {
         didSet {
             // Do the resizing all at once, immediately.
             CATransaction.begin()
@@ -159,10 +161,10 @@ class SpinningProgressIndicatorLayer: CALayer {
             
             // Resize the fins.
             let finBounds = bounds
-            var finGeo = finGeometryForBounds(finBounds)
+            let finGeo = finGeometryFor(bounds: finBounds)
             
             finLayersRoot.bounds = finBounds
-            finLayersRoot.position = yrkCGRectGetCenter(finBounds)
+            finLayersRoot.position = yrkCGRectGet(center:finBounds)
             for fin in finLayers {
                 fin.bounds = finGeo.bounds
                 fin.anchorPoint = finGeo.anchorPoint
@@ -171,17 +173,17 @@ class SpinningProgressIndicatorLayer: CALayer {
             }
             
             // Scale pie.
-            var pieGeo = pieGeometryForBounds(bounds)
+            let pieGeo = pieGeometryFor(bounds: bounds)
             let pieGeoBounds = pieGeo.bounds
             
             pieLayersRoot.bounds = pieGeoBounds
-            pieLayersRoot.position = yrkCGRectGetCenter(pieGeoBounds)
+            pieLayersRoot.position = yrkCGRectGet(center:pieGeoBounds)
             
             if pieOutline != nil {
-                updatePieOutlineDimensionsForGeometry(pieOutline, pieGeo: pieGeo)
+                updateDimensionsOf(outlineShape:pieOutline, for: pieGeo)
             }
             if pieChartShape != nil {
-                updatePieChartDimensionsForGeometry(pieChartShape, pieGeo: pieGeo)
+                updateDimensionsOf(pieChartShape:pieChartShape, for: pieGeo)
             }
             
             updateShadowDimensions()
@@ -193,8 +195,8 @@ class SpinningProgressIndicatorLayer: CALayer {
     func updateShadowDimensions()
     {
         if resizeShadows {
-            let scaleFactors = shadowScaleFactorsForBounds(self.bounds)
-            let scaleFactor = shorterDimensionForSize(scaleFactors)
+            let scaleFactors = shadowScaleFactorsFor(bounds:self.bounds)
+            let scaleFactor = shorterDimensionFor(size: scaleFactors)
             
             var scaledShadowOffset = initialShadowOffset
             scaledShadowOffset.width *= scaleFactor
@@ -206,7 +208,7 @@ class SpinningProgressIndicatorLayer: CALayer {
             // We could resize the sublayers’ shadows here.
         }
     }
-
+    
     
     //MARK: - Animation
     
@@ -261,31 +263,31 @@ class SpinningProgressIndicatorLayer: CALayer {
         addSublayer(pieLayersRoot)
     }
     
-    func shadowScaleFactorsForBounds(newBounds : CGRect) -> CGSize
+    func shadowScaleFactorsFor(bounds : CGRect) -> CGSize
     {
         let initialSize = referenceSizeForShadowResizing
-        var scaleFactors = newBounds.size
+        var scaleFactors = bounds.size
         scaleFactors.width /= initialSize.width
         scaleFactors.height /= initialSize.height
         return scaleFactors
     }
-
+    
     func createFinLayers()
     {
         removeFinLayers()
         
         let selfBounds = self.bounds
         finLayersRoot.bounds = selfBounds
-        finLayersRoot.position = yrkCGRectGetCenter(selfBounds)
+        finLayersRoot.position = yrkCGRectGet(center:selfBounds)
         
         // Create new fin layers
         let finBounds = finLayersRoot.bounds
-        let finGeo : FinGeometry = finGeometryForBounds(finBounds)
+        let finGeo : FinGeometry = finGeometryFor(bounds:finBounds)
         
         CATransaction.begin()
         CATransaction.setValue(true, forKey: kCATransactionDisableActions)
         
-        let rotationAngleBetweenFins : CGFloat =  CGFloat(M_PI) * -2.0 / CGFloat(numFins)
+        let rotationAngleBetweenFins : CGFloat =  .pi * -2.0 / CGFloat(numFins)
         
         finLayerRotationValues.removeAll()
         
@@ -303,7 +305,7 @@ class SpinningProgressIndicatorLayer: CALayer {
             
             finLayerRotationValues.append(rotationAngle)
             
-            newFin.opacity = initialOpacityForFinAtIndex(index)
+            newFin.opacity = initialOpacityForFinAt(index)
             
             finLayersRoot.addSublayer(newFin)
             finLayers.append(newFin)
@@ -311,8 +313,8 @@ class SpinningProgressIndicatorLayer: CALayer {
         
         CATransaction.commit()
     }
-
-    func initialOpacityForFinAtIndex(index : UInt) -> Float
+    
+    func initialOpacityForFinAt(_ index : UInt) -> Float
     {
         let fadePercent : CGFloat = 1.0 - CGFloat(index) /  CGFloat(numFins - 1)
         return indeterminateMinimumOpacity + ((fullOpacity - indeterminateMinimumOpacity) * Float(fadePercent))
@@ -324,36 +326,36 @@ class SpinningProgressIndicatorLayer: CALayer {
         CATransaction.setValue(true, forKey: kCATransactionDisableActions)
         deanimateFinLayers()
         
-//        if INDETERMINATE_FADE_ANIMATION {
-            var index : CFTimeInterval = 0
+        //        if INDETERMINATE_FADE_ANIMATION {
+        var index : CFTimeInterval = 0
+        
+        for finLayer in finLayers {
+            let now = finLayer.convertTime(CACurrentMediaTime(), from:nil)
             
-            for finLayer in finLayers {
-                let now = finLayer.convertTime(CACurrentMediaTime(), fromLayer:nil)
-                
-                finLayer.opacity = indeterminateMinimumOpacity
-                let fadeOut = CABasicAnimation(keyPath: FadeAnimationKey)
-                fadeOut.fromValue = fullOpacity
-                fadeOut.toValue = indeterminateMinimumOpacity
-                
-                fadeOut.duration = indeterminateCycleDuration
-                let timeOffset : CFTimeInterval = indeterminateCycleDuration - (indeterminateCycleDuration * index / CFTimeInterval(numFins - 1))
-                fadeOut.beginTime = now - timeOffset
-                fadeOut.fillMode = kCAFillModeBackwards
-                fadeOut.repeatCount = Float.infinity
-                finLayer.addAnimation(fadeOut, forKey:FadeAnimationKey)
-                index++
-            }
-//        } else {
-//            let animation = CAKeyframeAnimation(keyPath:"transform.rotation.z")
-//            animation.duration = indeterminateCycleDuration
-//            animation.cumulative = false
-//            animation.repeatCount = Float.infinity
-//            animation.values = finLayerRotationValues
-//            animation.removedOnCompletion = false
-//            animation.calculationMode = kCAAnimationDiscrete
-//            
-//            finLayersRoot.addAnimation(animation, forKey:RotationAnimationKey)
-//        }
+            finLayer.opacity = indeterminateMinimumOpacity
+            let fadeOut = CABasicAnimation(keyPath: FadeAnimationKey)
+            fadeOut.fromValue = fullOpacity
+            fadeOut.toValue = indeterminateMinimumOpacity
+            
+            fadeOut.duration = indeterminateCycleDuration
+            let timeOffset : CFTimeInterval = indeterminateCycleDuration - (indeterminateCycleDuration * index / CFTimeInterval(numFins - 1))
+            fadeOut.beginTime = now - timeOffset
+            fadeOut.fillMode = kCAFillModeBackwards
+            fadeOut.repeatCount = Float.infinity
+            finLayer.add(fadeOut, forKey:FadeAnimationKey)
+            index += 1
+        }
+        //        } else {
+        //            let animation = CAKeyframeAnimation(keyPath:"transform.rotation.z")
+        //            animation.duration = indeterminateCycleDuration
+        //            animation.cumulative = false
+        //            animation.repeatCount = Float.infinity
+        //            animation.values = finLayerRotationValues
+        //            animation.removedOnCompletion = false
+        //            animation.calculationMode = kCAAnimationDiscrete
+        //
+        //            finLayersRoot.addAnimation(animation, forKey:RotationAnimationKey)
+        //        }
         
         CATransaction.commit()
     }
@@ -363,13 +365,13 @@ class SpinningProgressIndicatorLayer: CALayer {
         CATransaction.begin()
         CATransaction.setValue(true, forKey: kCATransactionDisableActions)
         
-//        if INDETERMINATE_FADE_ANIMATION {
-            for finLayer in finLayers {
-                finLayer.removeAnimationForKey(FadeAnimationKey)
-            }
-//        } else {
-//            finLayersRoot.removeAnimationForKey(RotationAnimationKey)
-//        }
+        //        if INDETERMINATE_FADE_ANIMATION {
+        for finLayer in finLayers {
+            finLayer.removeAnimation(forKey: FadeAnimationKey)
+        }
+        //        } else {
+        //            finLayersRoot.removeAnimationForKey(RotationAnimationKey)
+        //        }
         
         CATransaction.commit()
     }
@@ -387,58 +389,58 @@ class SpinningProgressIndicatorLayer: CALayer {
     let PieChartPaddingPercentage : CGFloat = (1.0 / 16.0 / 2.0) // The padding around the pie chart.
     let DeterminateLayersMarginPercentage : CGFloat = 0.98 // Selected to look good with current indeterminate settings.
     
-    private func pieGeometryForBounds(bounds : CGRect) -> PieGeometry
+    fileprivate func pieGeometryFor(bounds : CGRect) -> PieGeometry
     {
         var pieGeo =  PieGeometry()
         
         // Make sure the circles will fit the frame.
         
-        var outerEdgeLength = shorterDimensionForSize(bounds.size)
+        var outerEdgeLength = shorterDimensionFor(size:bounds.size)
         outerEdgeLength *= DeterminateLayersMarginPercentage
         let xInset = (bounds.width - outerEdgeLength) / 2.0
         let yInset = (bounds.height - outerEdgeLength) / 2.0
         
         pieGeo.outerEdgeLength = outerEdgeLength
-        pieGeo.bounds = CGRectInset(bounds, xInset, yInset)
+        pieGeo.bounds = bounds.insetBy(dx: xInset, dy: yInset)
         pieGeo.outlineWidth = pieGeo.outerEdgeLength * OutlineWidthPercentage // This used to be rounded.
         return pieGeo
     }
     
-    private func  updatePieOutlineDimensionsForGeometry(outlineShape : CAShapeLayer, pieGeo : PieGeometry)
+    fileprivate func updateDimensionsOf(outlineShape : CAShapeLayer, for geometry : PieGeometry)
     {
-        let outlineInset = pieGeo.outlineWidth / 2
-        let outlineRect = CGRectInset(pieGeo.bounds, outlineInset, outlineInset)
+        let outlineInset = geometry.outlineWidth / 2
+        let outlineRect = geometry.bounds.insetBy(dx: outlineInset, dy: outlineInset)
         
-        var outlineTransform = CGAffineTransformForRotatingRectAroundCenter(outlineRect, angle:degreesToRadians(90.0))
-        let outlineFlip = CGAffineTransformForScalingRectAroundCenter(outlineRect, sx:-1.0, sy:1.0) // Flip left<->right.
-        outlineTransform = CGAffineTransformConcat(outlineTransform, outlineFlip)
+        var outlineTransform = CGAffineTransformForRotatingRectAround(center:outlineRect, angle:radiansFrom(degrees:90.0))
+        let outlineFlip = CGAffineTransformForScalingRectAround(center:outlineRect, sx:-1.0, sy:1.0) // Flip left<->right.
+        outlineTransform = outlineTransform.concatenating(outlineFlip)
         
-        let outlinePath = CGPathCreateWithEllipseInRect(outlineRect, &outlineTransform)
+        let outlinePath = CGPath(ellipseIn: outlineRect, transform: &outlineTransform)
         outlineShape.path = outlinePath
         
-        outlineShape.lineWidth = pieGeo.outlineWidth
+        outlineShape.lineWidth = geometry.outlineWidth
     }
     
-    private func  updatePieChartDimensionsForGeometry(pieChartShape : CAShapeLayer, pieGeo : PieGeometry)
+    fileprivate func updateDimensionsOf(pieChartShape : CAShapeLayer, for geometry : PieGeometry)
     {
-        let outerRadius : CGFloat = pieGeo.outerEdgeLength / 2.0
+        let outerRadius : CGFloat = geometry.outerEdgeLength / 2.0
         
         // The pie chart is drawn using a circular line
         // with a line width equal to twice the radius.
         // So we draw from every point on this line, which you can picture as a centerline,
         // radius units towards and away from the center, reaching the center exactly.
         // This way, we get a full circle, if the full length of the line is draw.
-        let pieChartExtraInset : CGFloat = (pieGeo.outerEdgeLength * PieChartPaddingPercentage)
-        let pieChartInset : CGFloat = (outerRadius + pieGeo.outlineWidth + pieChartExtraInset) / 2
+        let pieChartExtraInset : CGFloat = (geometry.outerEdgeLength * PieChartPaddingPercentage)
+        let pieChartInset : CGFloat = (outerRadius + geometry.outlineWidth + pieChartExtraInset) / 2
         let pieChartCenterlineRadius : CGFloat = outerRadius - pieChartInset
         let pieChartOutlineRadius : CGFloat = pieChartCenterlineRadius * 2
-        let pieChartRect : CGRect = CGRectInset(pieGeo.bounds, pieChartInset, pieChartInset)
+        let pieChartRect : CGRect = geometry.bounds.insetBy(dx: pieChartInset, dy: pieChartInset)
         
-        var pieChartTransform = CGAffineTransformForRotatingRectAroundCenter(pieChartRect, angle:degreesToRadians(90.0))
-        let pieChartFlip = CGAffineTransformForScalingRectAroundCenter(pieChartRect, sx:-1.0, sy:1.0) // Flip left<->right.
-        pieChartTransform = CGAffineTransformConcat(pieChartTransform, pieChartFlip)
+        var pieChartTransform = CGAffineTransformForRotatingRectAround(center :pieChartRect, angle:radiansFrom(degrees:90.0))
+        let pieChartFlip = CGAffineTransformForScalingRectAround(center:pieChartRect, sx:-1.0, sy:1.0) // Flip left<->right.
+        pieChartTransform = pieChartTransform.concatenating(pieChartFlip)
         
-        let pieChartPath = CGPathCreateWithEllipseInRect(pieChartRect, &pieChartTransform)
+        let pieChartPath = CGPath(ellipseIn: pieChartRect, transform: &pieChartTransform)
         pieChartShape.path = pieChartPath
         
         pieChartShape.lineWidth = pieChartOutlineRadius
@@ -451,11 +453,11 @@ class SpinningProgressIndicatorLayer: CALayer {
         // Based on DRPieChartProgressView by David Rönnqvist:
         // https://github.com/JanX2/cocoaheads-coreanimation-samplecode
         
-        let pieGeo = pieGeometryForBounds(self.bounds)
+        let pieGeo = pieGeometryFor(bounds:self.bounds)
         
         let pieGeoBounds = pieGeo.bounds
         pieLayersRoot.bounds = pieGeoBounds
-        pieLayersRoot.position = yrkCGRectGetCenter(pieGeoBounds)
+        pieLayersRoot.position = yrkCGRectGet(center:pieGeoBounds)
         
         // Create new determinate layers.
         
@@ -463,13 +465,13 @@ class SpinningProgressIndicatorLayer: CALayer {
         CATransaction.setValue(true, forKey: kCATransactionDisableActions)
         
         let foregroundColor = foreColor
-        let clearColor = CGColorGetConstantColor(kCGColorClear)
+        let clearColor = CGColor.clear
         
         // Calculate the radius for the outline. Since strokes are centered,
         // the shape needs to be inset half the stroke width.
         pieOutline = CAShapeLayer()
         pieOutline.opacity = fullOpacity
-        updatePieOutlineDimensionsForGeometry(pieOutline!, pieGeo: pieGeo)
+        updateDimensionsOf(outlineShape:pieOutline!, for: pieGeo)
         
         // Draw only the line of the circular outline shape.
         pieOutline.fillColor =    clearColor
@@ -480,7 +482,7 @@ class SpinningProgressIndicatorLayer: CALayer {
         // the outline)).
         pieChartShape = CAShapeLayer()
         pieChartShape.opacity = fullOpacity
-        updatePieChartDimensionsForGeometry(pieChartShape, pieGeo: pieGeo)
+        updateDimensionsOf(pieChartShape:pieChartShape, for: pieGeo)
         
         // We don't want to fill the pie chart since that will be visible
         // even when we change the stroke start and stroke end. Instead
@@ -507,65 +509,65 @@ class SpinningProgressIndicatorLayer: CALayer {
         }
     }
     
-    func  degreesToRadians(degrees : CGFloat) -> CGFloat
+    func radiansFrom(degrees : CGFloat) -> CGFloat
     {
-        return degrees * CGFloat(M_PI) / 180.0
+        return degrees * .pi / 180.0
     }
     
-    private func CGAffineTransformForRotatingRectAroundCenter(rect : CGRect, angle : CGFloat) -> CGAffineTransform
+    fileprivate func CGAffineTransformForRotatingRectAround(center rect : CGRect, angle : CGFloat) -> CGAffineTransform
     {
-        var transform = CGAffineTransformIdentity
+        var transform = CGAffineTransform.identity
         
-        transform = CGAffineTransformTranslate(transform, CGRectGetMidX(rect), CGRectGetMidY(rect))
-        transform = CGAffineTransformRotate(transform, angle)
-        transform = CGAffineTransformTranslate(transform, -CGRectGetMidX(rect), -CGRectGetMidY(rect))
+        transform = transform.translatedBy(x: rect.midX, y: rect.midY)
+        transform = transform.rotated(by: angle)
+        transform = transform.translatedBy(x: -rect.midX, y: -rect.midY)
         
         return transform
     }
     
-    private func CGAffineTransformForScalingRectAroundCenter(rect : CGRect, sx : CGFloat, sy : CGFloat)  -> CGAffineTransform
+    fileprivate func CGAffineTransformForScalingRectAround(center rect : CGRect, sx : CGFloat, sy : CGFloat)  -> CGAffineTransform
     {
-        var transform = CGAffineTransformIdentity
+        var transform = CGAffineTransform.identity
         
-        transform = CGAffineTransformTranslate(transform, CGRectGetMidX(rect), CGRectGetMidY(rect))
-        transform = CGAffineTransformScale(transform, sx, sy)
-        transform = CGAffineTransformTranslate(transform, -CGRectGetMidX(rect), -CGRectGetMidY(rect))
+        transform = transform.translatedBy(x: rect.midX, y: rect.midY)
+        transform = transform.scaledBy(x: sx, y: sy)
+        transform = transform.translatedBy(x: -rect.midX, y: -rect.midY)
         
         return transform
     }
     
-    private func finGeometryForBounds(bounds : CGRect) -> FinGeometry {
-        let finBounds = finBoundsForBounds(bounds)
+    fileprivate func finGeometryFor(bounds : CGRect) -> FinGeometry {
+        let finBounds = finBoundsFor(bounds:bounds)
         return FinGeometry(bounds: finBounds,
-            anchorPoint: finAnchorPoint(),
-            position: CGPointMake(bounds.size.width / 2, bounds.size.height / 2),
-            cornerRadius: finBounds.size.width / 2)
+                           anchorPoint: finAnchorPoint(),
+                           position: CGPoint(x: bounds.size.width / 2, y: bounds.size.height / 2),
+                           cornerRadius: finBounds.size.width / 2)
     }
     
     let FinWidthPercent : CGFloat = 0.095
     let FinHeightPercent : CGFloat = 0.30
     let FinAnchorPointVerticalOffsetPercent : CGFloat = -0.63 // Aesthetically pleasing value. Also indirectly determines margin.
     
-    private func finBoundsForBounds(bounds : CGRect) -> CGRect {
+    fileprivate func finBoundsFor(bounds : CGRect) -> CGRect {
         let size = bounds.size
-        let minSide = shorterDimensionForSize(size)
+        let minSide = shorterDimensionFor(size:size)
         let width : CGFloat = minSide * FinWidthPercent
         let height : CGFloat = minSide * FinHeightPercent
         
-        return CGRectMake(0, 0, width, height)
-    }
-
-    private func finAnchorPoint() -> CGPoint {
-    // Horizentally centered, vertically offset.
-        return CGPointMake(0.5, FinAnchorPointVerticalOffsetPercent)
+        return CGRect(x: 0, y: 0, width: width, height: height)
     }
     
-    private func yrkCGRectGetCenter(rect : CGRect) -> CGPoint {
-        return CGPointMake(CGRectGetMidX(rect), CGRectGetMidY(rect));
+    fileprivate func finAnchorPoint() -> CGPoint {
+        // Horizentally centered, vertically offset.
+        return CGPoint(x: 0.5, y: FinAnchorPointVerticalOffsetPercent)
     }
     
-    private func shorterDimensionForSize(size : CGSize ) -> CGFloat {
+    fileprivate func yrkCGRectGet(center rect : CGRect) -> CGPoint {
+        return CGPoint(x: rect.midX, y: rect.midY);
+    }
+    
+    fileprivate func shorterDimensionFor(size : CGSize ) -> CGFloat {
         return min(size.width, size.height);
     }
-
+    
 }

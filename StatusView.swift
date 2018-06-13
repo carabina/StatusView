@@ -10,32 +10,32 @@ import Cocoa
 class StatusView: NSView {
     
     //MARK: - Enums
-
+    
     enum Status {
-        case None, Processing, Failed, Caution, Success
+        case none, processing, failed, caution, success
     }
     
     //MARK: - Structs
-
+    
     struct ShapeColor {
-        static let red = CGColorCreateGenericRGB(1.0, 0.25, 0.25, 1.0)
-        static let orange = CGColorCreateGenericRGB(0.9, 0.7, 0.0, 1.0)
-        static let green = CGColorCreateGenericRGB(0.1, 0.8, 0.2, 1.0)
-        static let white = CGColorGetConstantColor(kCGColorWhite)
-        static let black = CGColorGetConstantColor(kCGColorBlack)
-        static let clear = CGColorGetConstantColor(kCGColorClear)
-        static let gray = CGColorCreateGenericGray(0.5, 0.75)
+        static let red = CGColor(red: 1.0, green: 0.25, blue: 0.25, alpha: 1.0)
+        static let orange = CGColor(red: 0.9, green: 0.7, blue: 0.0, alpha: 1.0)
+        static let green = CGColor(red: 0.1, green: 0.8, blue: 0.2, alpha: 1.0)
+        static let white = CGColor.white
+        static let black = CGColor.black
+        static let clear = CGColor.clear
+        static let gray = CGColor(gray: 0.5, alpha: 0.75)
     }
     
     //MARK: - Variables
     //MARK: Objects
-
+    
     var mainLayer : CALayer!
     let borderLayer = CAShapeLayer()
     let shapeLayer = CAShapeLayer()
     var shapeColor : CGColor!
     var progressIndicatorLayer : SpinningProgressIndicatorLayer!
-
+    
     //MARK: Geometric parameters
     
     var viewSideLength : CGFloat = 0.0
@@ -51,28 +51,37 @@ class StatusView: NSView {
     
     //MARK: Appearance
     
-    var status : Status = .None {
+    var status : Status = .none {
+        
         willSet {
-            if newValue == .Processing  {
-                startProgressIndicator()
-            } else if newValue != .Processing {
-                stopProgressIndicator()
+            DispatchQueue.main.async {
+                if newValue == .processing  {
+                    self.startProgressIndicator()
+                } else if newValue != .processing {
+                    self.stopProgressIndicator()
+                }
             }
         }
         didSet {
-            updateLayerProperties()
+            DispatchQueue.main.async {
+                self.updateLayerProperties()
+            }
         }
     }
     
     @IBInspectable var inverted : Bool = false {
         didSet {
-            updateLayerProperties()
+            DispatchQueue.main.async {
+                self.updateLayerProperties()
+            }
         }
     }
-
+    
     @IBInspectable var enabled : Bool = true {
         didSet {
-            updateLayerProperties()
+            DispatchQueue.main.async {
+                self.updateLayerProperties()
+            }
         }
     }
     
@@ -95,15 +104,15 @@ class StatusView: NSView {
     }
     
     //MARK: - Redraw methods
-
+    
     override func layout()
     {
         super.layout()
         viewSideLength = min(frame.width, frame.height)
         lineWidth = viewSideLength / 14.0
         let viewRect = CGRect(x: 0.0 , y: 0.0, width: viewSideLength, height: viewSideLength)
-        let borderRect = CGRectInset(viewRect, lineWidth * 0.8, lineWidth * 0.8)
-        borderLayer.path = CGPathCreateWithEllipseInRect(borderRect, nil)
+        let borderRect = viewRect.insetBy(dx: lineWidth * 0.8, dy: lineWidth * 0.8)
+        borderLayer.path = CGPath(ellipseIn: borderRect, transform: nil)
         borderLayer.lineWidth = lineWidth
         borderLayer.frame = viewRect
         shapeLayer.frame = viewRect
@@ -113,11 +122,11 @@ class StatusView: NSView {
     func updateLayerProperties()
     {
         switch status {
-            case .None: shapeColor = ShapeColor.clear
-            case .Processing: shapeColor = ShapeColor.clear; enabled ? startProgressIndicator() : stopProgressIndicator()
-            case .Failed: shapeColor = enabled ? ShapeColor.red : ShapeColor.gray
-            case .Caution: shapeColor = enabled ? ShapeColor.orange : ShapeColor.gray
-            case .Success: shapeColor = enabled ? ShapeColor.green : ShapeColor.gray
+        case .none: shapeColor = ShapeColor.clear
+        case .processing: shapeColor = ShapeColor.clear; enabled ? startProgressIndicator() : stopProgressIndicator()
+        case .failed: shapeColor = enabled ? ShapeColor.red : ShapeColor.gray
+        case .caution: shapeColor = enabled ? ShapeColor.orange : ShapeColor.gray
+        case .success: shapeColor = enabled ? ShapeColor.green : ShapeColor.gray
         }
         borderLayer.fillColor = inverted ? shapeColor : nil
         borderLayer.strokeColor = shapeColor
@@ -126,32 +135,32 @@ class StatusView: NSView {
         let oneThird = oneThirdPosition
         let twoThird = twoThirdPosition
         
-        var path = CGPathCreateMutable()
+        let path = CGMutablePath()
         switch status {
-        case .None, .Processing:
+        case .none, .processing:
             shapeLayer.path = nil
             return
             
-        case .Failed:
-            CGPathMoveToPoint(path, nil, oneThird, twoThird)
-            CGPathAddLineToPoint(path, nil, twoThird, oneThird)
-            CGPathMoveToPoint(path, nil, oneThird, oneThird)
-            CGPathAddLineToPoint(path, nil, twoThird, twoThird)
+        case .failed:
+            path.move(to: CGPoint(x:oneThird, y:twoThird))
+            path.addLine(to: CGPoint(x:twoThird, y:oneThird))
+            path.move(to: CGPoint(x:oneThird, y:oneThird))
+            path.addLine(to: CGPoint(x:twoThird, y:twoThird))
             
-        case .Caution:
+        case .caution:
             let xBottom = viewSideLength / 2
-            CGPathAddArc(path, nil, xBottom, oneThird * 0.75, lineWidth * 0.1, CGFloat(M_PI) * 2.0, 0.0, true)
-            CGPathMoveToPoint(path, nil, xBottom, oneThird * 1.3)
-            CGPathAddLineToPoint(path, nil, xBottom, xBottom * 1.45)
+            path.addArc(center:CGPoint(x:xBottom, y:oneThird * 0.75), radius:lineWidth * 0.1, startAngle:.pi * 2.0, endAngle:0.0, clockwise:true)
+            path.move(to: CGPoint(x:xBottom, y:oneThird * 1.3))
+            path.addLine(to: CGPoint(x:xBottom, y:xBottom * 1.45))
             
-        case .Success:
-            CGPathMoveToPoint(path, nil, oneThird, (oneThird + viewSideLength / 9))
-            CGPathAddLineToPoint(path, nil, (oneThird + viewSideLength / 9), oneThird)
-            CGPathAddLineToPoint(path, nil, twoThird, twoThird)
+        case .success:
+            path.move(to: CGPoint(x:oneThird, y:(oneThird + viewSideLength / 9)))
+            path.addLine(to: CGPoint(x:(oneThird + viewSideLength / 9), y:oneThird))
+            path.addLine(to: CGPoint(x:twoThird, y:twoThird))
         }
         
-        shapeLayer.path = CGPathCreateCopyByStrokingPath(path, nil, lineWidth, kCGLineCapRound, kCGLineJoinRound, 0)
-
+        shapeLayer.path = CGPath(__byStroking: path, transform: nil, lineWidth: lineWidth, lineCap: CGLineCap.round, lineJoin: CGLineJoin.round, miterLimit: 0)
+        
     }
     
     func startProgressIndicator()
@@ -159,22 +168,50 @@ class StatusView: NSView {
         if progressIndicatorLayer == nil {
             progressIndicatorLayer = SpinningProgressIndicatorLayer(indeterminateCycleDuration:1.5, determinateTweenTime:CFTimeInterval.infinity)
             progressIndicatorLayer.name = "progressIndicatorLayer"
-            progressIndicatorLayer.anchorPoint = CGPointZero
+            progressIndicatorLayer.anchorPoint = CGPoint.zero
             progressIndicatorLayer.bounds = CGRect(x: -lineWidth, y: -lineWidth, width: viewSideLength - lineWidth * 2, height: viewSideLength - lineWidth * 2)
-            progressIndicatorLayer.autoresizingMask = .LayerWidthSizable | .LayerHeightSizable
+            progressIndicatorLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
             progressIndicatorLayer.zPosition = 10.0 // make sure it goes in front of the background layer
-            mainLayer.addSublayer(progressIndicatorLayer)
-            progressIndicatorLayer.startProgressAnimation()
+            self.mainLayer.addSublayer(self.progressIndicatorLayer)
+            self.progressIndicatorLayer.startProgressAnimation()
         }
     }
     
     func stopProgressIndicator()
     {
         if progressIndicatorLayer != nil {
-            progressIndicatorLayer.stopProgressAnimation()
-            progressIndicatorLayer.removeFromSuperlayer()
-            progressIndicatorLayer = nil
+            self.progressIndicatorLayer.stopProgressAnimation()
+            self.progressIndicatorLayer.removeFromSuperlayer()
+            self.progressIndicatorLayer = nil
         }
-
+    }
+    
+    func bindEnabled(to object : AnyObject, keyPath : String)
+    {
+        #if swift(>=3.3)
+        bind(.enabled, to:object, withKeyPath:keyPath)
+        #else
+        bind(NSBindingName.enabled, to:object, withKeyPath:keyPath)
+        #endif
+    }
+    
+    func bindStatus(to object : AnyObject, keyPath : String)
+    {
+        #if swift(>=3.3)
+        bind(NSBindingName(rawValue: "status"), to:object, withKeyPath:keyPath)
+        #else
+        bind("status", to:object, withKeyPath:keyPath)
+        #endif
+        
+    }
+    
+    func bindHide(to object : AnyObject, keyPath : String)
+    {
+        #if swift(>=3.3)
+        bind(.hidden, to:object, withKeyPath:keyPath)
+        #else
+        bind(NSBindingName.hidden, to:object, withKeyPath:keyPath)
+        #endif
+        
     }
 }
