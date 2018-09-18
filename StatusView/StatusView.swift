@@ -5,9 +5,19 @@
 //
 //
 
-import Cocoa
 
-class StatusView: NSView {
+#if os(iOS) || os(watchOS) || os(tvOS)
+import UIKit
+public typealias STColor = UIColor
+public typealias STView = UIView
+#else
+import Cocoa
+public typealias STColor = NSColor
+public typealias STView = NSView
+#endif
+
+
+class StatusView: STView {
     
     //MARK: - Enums
     
@@ -18,13 +28,13 @@ class StatusView: NSView {
     //MARK: - Structs
     
     struct ShapeColor {
-        static let red = CGColor(red: 1.0, green: 0.25, blue: 0.25, alpha: 1.0)
-        static let orange = CGColor(red: 0.9, green: 0.7, blue: 0.0, alpha: 1.0)
-        static let green = CGColor(red: 0.1, green: 0.8, blue: 0.2, alpha: 1.0)
-        static let white = CGColor.white
-        static let black = CGColor.black
-        static let clear = CGColor.clear
-        static let gray = CGColor(gray: 0.5, alpha: 0.75)
+        static let red = STColor(red: 1.0, green: 0.25, blue: 0.25, alpha: 1.0).cgColor
+        static let orange = STColor(red: 0.9, green: 0.7, blue: 0.0, alpha: 1.0).cgColor
+        static let green = STColor(red: 0.1, green: 0.8, blue: 0.2, alpha: 1.0).cgColor
+        static let white = STColor.white.cgColor
+        static let black = STColor.black.cgColor
+        static let clear = STColor.clear.cgColor
+        static let gray = STColor(white: 0.5, alpha: 0.75).cgColor
     }
     
     //MARK: - Variables
@@ -87,27 +97,44 @@ class StatusView: NSView {
     
     //MARK: - Init
     
-    override init(frame: NSRect) {
+    override init(frame: CGRect) {
         super.init(frame: frame)
+        #if os(macOS)
         wantsLayer = true
         mainLayer = layer!
+        #else
+        mainLayer = layer
+        #endif
         mainLayer.addSublayer(borderLayer)
         mainLayer.addSublayer(shapeLayer)
     }
     
     required init?(coder: NSCoder) {
         super.init(coder:coder)
+        #if os(macOS)
         wantsLayer = true
         mainLayer = layer!
+        #else
+        mainLayer = layer
+        #endif
         mainLayer.addSublayer(borderLayer)
         mainLayer.addSublayer(shapeLayer)
     }
     
     //MARK: - Redraw methods
-    
-    override func layout()
-    {
+    #if os(iOS)
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        updateLayouts()
+    }
+    #else
+    override func layout() {
         super.layout()
+        updateLayouts()
+    }
+    #endif
+    
+    func updateLayouts() {
         viewSideLength = min(frame.width, frame.height)
         lineWidth = viewSideLength / 14.0
         let viewRect = CGRect(x: 0.0 , y: 0.0, width: viewSideLength, height: viewSideLength)
@@ -116,6 +143,7 @@ class StatusView: NSView {
         borderLayer.lineWidth = lineWidth
         borderLayer.frame = viewRect
         shapeLayer.frame = viewRect
+        if status == .processing { progressIndicatorLayer.frame = viewRect }
         updateLayerProperties()
     }
     
@@ -159,7 +187,11 @@ class StatusView: NSView {
             path.addLine(to: CGPoint(x:twoThird, y:twoThird))
         }
         
+        #if os(iOS)
+        shapeLayer.transform = CATransform3DMakeRotation(.pi, 1, 0, 0)
+        #endif
         shapeLayer.path = CGPath(__byStroking: path, transform: nil, lineWidth: lineWidth, lineCap: CGLineCap.round, lineJoin: CGLineJoin.round, miterLimit: 0)
+        
         
     }
     
@@ -170,9 +202,11 @@ class StatusView: NSView {
             progressIndicatorLayer.name = "progressIndicatorLayer"
             progressIndicatorLayer.anchorPoint = CGPoint.zero
             progressIndicatorLayer.bounds = CGRect(x: -lineWidth, y: -lineWidth, width: viewSideLength - lineWidth * 2, height: viewSideLength - lineWidth * 2)
+            #if os(macOS)
             progressIndicatorLayer.autoresizingMask = [.layerWidthSizable, .layerHeightSizable]
+            #endif
             progressIndicatorLayer.zPosition = 10.0 // make sure it goes in front of the background layer
-            self.mainLayer.addSublayer(self.progressIndicatorLayer)
+            mainLayer.addSublayer(self.progressIndicatorLayer)
             self.progressIndicatorLayer.startProgressAnimation()
         }
     }
@@ -186,6 +220,7 @@ class StatusView: NSView {
         }
     }
     
+    #if os(macOS)
     func bindEnabled(to object : AnyObject, keyPath : String)
     {
         #if swift(>=3.3)
@@ -202,7 +237,6 @@ class StatusView: NSView {
         #else
         bind("status", to:object, withKeyPath:keyPath)
         #endif
-        
     }
     
     func bindHide(to object : AnyObject, keyPath : String)
@@ -212,6 +246,6 @@ class StatusView: NSView {
         #else
         bind(NSBindingName.hidden, to:object, withKeyPath:keyPath)
         #endif
-        
     }
+    #endif
 }

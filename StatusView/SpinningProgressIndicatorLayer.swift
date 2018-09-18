@@ -5,12 +5,18 @@
 //  Swift version by Stefan Klieme.
 //
 
+#if os(iOS) || os(watchOS) || os(tvOS)
+import UIKit
+#else
 import Cocoa
+#endif
 
 class SpinningProgressIndicatorLayer: CALayer {
     
-    let RotationAnimationKey = "rotationAnimation"
-    let FadeAnimationKey = "opacity"
+    struct AnimationKey {
+        static let rotation = "rotationAnimation"
+        static let fade = "opacity"
+    }
     //    let INDETERMINATE_FADE_ANIMATION = true
     
     struct FinGeometry {
@@ -27,7 +33,7 @@ class SpinningProgressIndicatorLayer: CALayer {
     }
     
     fileprivate var indeterminateCycleDuration : CFTimeInterval
-    fileprivate var foreColor = CGColor.clear
+    fileprivate var foreColor = STColor.clear.cgColor
     fileprivate var fullOpacity : Float
     fileprivate var indeterminateMinimumOpacity : Float
     fileprivate var numFins : UInt
@@ -56,8 +62,14 @@ class SpinningProgressIndicatorLayer: CALayer {
         }
     }
     
-    var color : NSColor  { // "copy" because we don't retain it -- we create a CGColor from it
-        get { return NSColor(cgColor: foreColor)! }
+    var color : STColor  { // "copy" because we don't retain it -- we create a CGColor from it
+        get {
+            #if os(macOS)
+            return NSColor(cgColor: foreColor)!
+            #else
+            return UIColor(cgColor: foreColor)
+            #endif
+        }
         set {
             // Need to convert from NSColor to CGColor
             foreColor = newValue.cgColor
@@ -132,7 +144,7 @@ class SpinningProgressIndicatorLayer: CALayer {
         referenceSizeForShadowResizing = CGSize(width: 100.0, height: 100.0)
         
         super.init()
-        self.color = NSColor.black
+        self.color = STColor.black
         self.addSublayer(finLayersRoot)
         self.bounds = CGRect(x:0.0, y:0.0, width:10.0, height:10.0)
         
@@ -333,16 +345,20 @@ class SpinningProgressIndicatorLayer: CALayer {
             let now = finLayer.convertTime(CACurrentMediaTime(), from:nil)
             
             finLayer.opacity = indeterminateMinimumOpacity
-            let fadeOut = CABasicAnimation(keyPath: FadeAnimationKey)
+            let fadeOut = CABasicAnimation(keyPath: AnimationKey.fade)
             fadeOut.fromValue = fullOpacity
             fadeOut.toValue = indeterminateMinimumOpacity
             
             fadeOut.duration = indeterminateCycleDuration
             let timeOffset : CFTimeInterval = indeterminateCycleDuration - (indeterminateCycleDuration * index / CFTimeInterval(numFins - 1))
             fadeOut.beginTime = now - timeOffset
+#if swift(>=4.2)
+            fadeOut.fillMode = CAMediaTimingFillMode.backwards
+#else
             fadeOut.fillMode = kCAFillModeBackwards
+#endif
             fadeOut.repeatCount = Float.infinity
-            finLayer.add(fadeOut, forKey:FadeAnimationKey)
+            finLayer.add(fadeOut, forKey:AnimationKey.fade)
             index += 1
         }
         //        } else {
@@ -367,7 +383,7 @@ class SpinningProgressIndicatorLayer: CALayer {
         
         //        if INDETERMINATE_FADE_ANIMATION {
         for finLayer in finLayers {
-            finLayer.removeAnimation(forKey: FadeAnimationKey)
+            finLayer.removeAnimation(forKey: AnimationKey.fade)
         }
         //        } else {
         //            finLayersRoot.removeAnimationForKey(RotationAnimationKey)
@@ -465,7 +481,7 @@ class SpinningProgressIndicatorLayer: CALayer {
         CATransaction.setValue(true, forKey: kCATransactionDisableActions)
         
         let foregroundColor = foreColor
-        let clearColor = CGColor.clear
+        let clearColor = STColor.clear.cgColor
         
         // Calculate the radius for the outline. Since strokes are centered,
         // the shape needs to be inset half the stroke width.
